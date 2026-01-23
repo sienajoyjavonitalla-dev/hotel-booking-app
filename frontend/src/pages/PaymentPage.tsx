@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBooking } from '../context/BookingContext';
+import { useToast } from '../context/ToastContext';
 import { bookingService } from '../services/bookingService';
 import { format } from 'date-fns';
 import { TextField, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel } from '@mui/material';
@@ -8,6 +9,7 @@ import { TextField, Radio, RadioGroup, FormControlLabel, FormControl, FormLabel 
 const PaymentPage: React.FC = () => {
     const navigate = useNavigate();
     const { state, dispatch } = useBooking();
+    const { showToast } = useToast();
     const [paymentMethod, setPaymentMethod] = useState('credit_card');
     const [cardData, setCardData] = useState({
         cardNumber: '',
@@ -113,11 +115,13 @@ const PaymentPage: React.FC = () => {
             await new Promise(resolve => setTimeout(resolve, 1500));
 
             // Navigate to confirmation page
+            showToast('Payment processed successfully!', 'success');
             navigate(`/confirmation/${booking.id}`);
         } catch (error) {
             console.error('Error creating booking:', error);
-            dispatch({ type: 'SET_ERROR', payload: 'Failed to process payment. Please try again.' });
-            alert('Payment processing failed. Please try again.');
+            const errorMessage = error instanceof Error ? error.message : 'Failed to process payment. Please try again.';
+            dispatch({ type: 'SET_ERROR', payload: errorMessage });
+            showToast(errorMessage, 'error');
         } finally {
             setProcessing(false);
             dispatch({ type: 'SET_LOADING', payload: false });
@@ -290,9 +294,16 @@ const PaymentPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             >
-                                {processing ? 'Processing Payment...' : `Pay $${state.totalAmount.toFixed(2)}`}
+                                {processing ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <span className="animate-spin">⏳</span>
+                                        Processing Payment...
+                                    </span>
+                                ) : (
+                                    `Pay $${state.totalAmount.toFixed(2)}`
+                                )}
                             </button>
                         </form>
                     </div>

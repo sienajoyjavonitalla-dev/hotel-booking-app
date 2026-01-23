@@ -71,6 +71,15 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit }) => {
         e.preventDefault();
         if (validate()) {
             onSubmit(formData);
+        } else {
+            // Scroll to first error
+            const firstErrorField = Object.keys(errors)[0];
+            if (firstErrorField) {
+                const element = document.querySelector(`[name="${firstErrorField}"]`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
         }
     };
 
@@ -154,7 +163,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ onSubmit }) => {
 
             <button
                 type="submit"
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
+                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
                 Continue to Payment
             </button>

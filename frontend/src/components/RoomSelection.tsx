@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Room } from '../services/hotelService';
 import { bookingService } from '../services/bookingService';
 import { format } from 'date-fns';
+import LoadingSpinner from './LoadingSpinner';
 
 interface RoomSelectionProps {
     rooms: Room[];
@@ -102,11 +103,7 @@ const RoomSelection: React.FC<RoomSelectionProps> = ({
     }
 
     if (loading) {
-        return (
-            <div className="text-center py-8">
-                <p className="text-gray-600">Checking room availability...</p>
-            </div>
-        );
+        return <LoadingSpinner text="Checking room availability..." />;
     }
 
     const availableRooms = rooms.filter(room => {
@@ -182,16 +179,16 @@ const RoomSelection: React.FC<RoomSelectionProps> = ({
                                     <button
                                         onClick={() => handleQuantityChange(room.id, Math.max(0, quantity - 1))}
                                         disabled={quantity === 0}
-                                        className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 hover:border-blue-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent active:scale-95"
                                     >
-                                        <span className="text-gray-600">−</span>
+                                        <span className="text-gray-600 font-bold">−</span>
                                     </button>
-                                    <span className="w-12 text-center font-semibold text-gray-900">{quantity}</span>
+                                    <span className="w-12 text-center font-semibold text-gray-900 text-lg">{quantity}</span>
                                     <button
                                         onClick={() => handleQuantityChange(room.id, quantity + 1)}
-                                        className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                                        className="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-blue-50 hover:border-blue-500 transition-all duration-200 active:scale-95"
                                     >
-                                        <span className="text-gray-600">+</span>
+                                        <span className="text-blue-600 font-bold">+</span>
                                     </button>
                                 </div>
                             </div>

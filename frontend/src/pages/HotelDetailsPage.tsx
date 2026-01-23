@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { hotelService, Hotel, Room } from '../services/hotelService';
 import { useBooking } from '../context/BookingContext';
+import { useToast } from '../context/ToastContext';
 import DateRangePicker from '../components/DateRangePicker';
 import RoomSelection from '../components/RoomSelection';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const HotelDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { state, dispatch } = useBooking();
+    const { showToast } = useToast();
     const [hotel, setHotel] = useState<Hotel | null>(null);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [loading, setLoading] = useState(true);
@@ -22,6 +25,7 @@ const HotelDetailsPage: React.FC = () => {
 
             try {
                 setLoading(true);
+                setError(null);
                 const hotelData = await hotelService.getHotel(parseInt(id));
                 setHotel(hotelData);
                 setRooms(hotelData.rooms || []);
@@ -29,7 +33,9 @@ const HotelDetailsPage: React.FC = () => {
                 // Set hotel in booking context
                 dispatch({ type: 'SELECT_HOTEL', payload: hotelData });
             } catch (err) {
-                setError('Failed to load hotel details');
+                const errorMessage = err instanceof Error ? err.message : 'Failed to load hotel details';
+                setError(errorMessage);
+                showToast(errorMessage, 'error');
                 console.error('Error fetching hotel:', err);
             } finally {
                 setLoading(false);
@@ -37,7 +43,7 @@ const HotelDetailsPage: React.FC = () => {
         };
 
         fetchHotelData();
-    }, [id, dispatch]);
+    }, [id, dispatch, showToast]);
 
     const handleDateChange = (checkInDate: Date | null, checkOutDate: Date | null) => {
         setCheckIn(checkInDate);
@@ -66,24 +72,28 @@ const HotelDetailsPage: React.FC = () => {
 
     const handleProceedToBooking = () => {
         if (!checkIn || !checkOut || !state.selectedRoom) {
-            alert('Please select dates and at least one room');
+            showToast('Please select dates and at least one room', 'warning');
             return;
         }
         navigate('/booking');
     };
 
     if (loading) {
-        return (
-            <div className="text-center py-12">
-                <p className="text-gray-600">Loading hotel details...</p>
-            </div>
-        );
+        return <LoadingSpinner text="Loading hotel details..." />;
     }
 
     if (error || !hotel) {
         return (
             <div className="text-center py-12">
-                <p className="text-red-600">{error || 'Hotel not found'}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+                    <p className="text-red-800 font-semibold mb-4">{error || 'Hotel not found'}</p>
+                    <button
+                        onClick={() => navigate('/hotels')}
+                        className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        Back to Hotels
+                    </button>
+                </div>
             </div>
         );
     }
@@ -168,9 +178,9 @@ const HotelDetailsPage: React.FC = () => {
                         </div>
                         <button
                             onClick={handleProceedToBooking}
-                            className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors"
+                            className="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl"
                         >
-                            Proceed to Booking
+                            Proceed to Booking →
                         </button>
                     </div>
                 </div>

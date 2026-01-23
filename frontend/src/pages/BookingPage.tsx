@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBooking } from '../context/BookingContext';
+import { useToast } from '../context/ToastContext';
 import BookingForm from '../components/BookingForm';
 import { format } from 'date-fns';
 
 const BookingPage: React.FC = () => {
     const navigate = useNavigate();
     const { state } = useBooking();
+    const { showToast } = useToast();
 
     // Redirect if essential booking data is missing
     if (!state.selectedHotel || !state.selectedRoom || !state.checkInDate || !state.checkOutDate) {

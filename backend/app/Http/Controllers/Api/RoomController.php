@@ -18,20 +18,30 @@ class RoomController extends Controller
 
         $room = Room::findOrFail($request->room_id);
         
-        // Check if room is available for the entire date range
+        // Calculate total nights (exclude check-out date since guest leaves that day)
+        $checkInDate = \Carbon\Carbon::parse($request->check_in);
+        $checkOutDate = \Carbon\Carbon::parse($request->check_out);
+        // Cast to int to avoid strict-comparison issues like 1 (int) vs 1.0 (float)
+        $totalDays = (int) $checkInDate->diffInDays($checkOutDate);
+        
+        // Check if room is available for all nights (from check-in to check-out, excluding check-out date)
+        // Guest needs room on check-in date but not on check-out date (they leave that morning)
         $availabilityCount = $room->roomAvailability()
-            ->whereBetween('date', [$request->check_in, $request->check_out])
+            ->where('date', '>=', $request->check_in)
+            ->where('date', '<', $request->check_out) // Exclude check-out date
             ->where('is_available', true)
             ->count();
-            
-        $totalDays = \Carbon\Carbon::parse($request->check_in)
-            ->diffInDays(\Carbon\Carbon::parse($request->check_out));
-            
-        return response()->json([
+        
+        $response = [
+            // Strict compare is OK now because both are ints
             'available' => $availabilityCount === $totalDays,
             'room_id' => $request->room_id,
             'check_in' => $request->check_in,
-            'check_out' => $request->check_out
-        ]);
+            'check_out' => $request->check_out,
+            'availability_count' => $availabilityCount,
+            'total_days' => $totalDays
+        ];
+            
+        return response()->json($response);
     }
 }

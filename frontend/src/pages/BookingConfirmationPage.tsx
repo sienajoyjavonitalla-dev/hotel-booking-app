@@ -3,11 +3,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { bookingService, Booking } from '../services/bookingService';
 import { format } from 'date-fns';
 import { useBooking } from '../context/BookingContext';
+import { useToast } from '../context/ToastContext';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const BookingConfirmationPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { dispatch } = useBooking();
+    const { showToast } = useToast();
     const [booking, setBooking] = useState<Booking | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -18,10 +21,13 @@ const BookingConfirmationPage: React.FC = () => {
 
             try {
                 setLoading(true);
+                setError(null);
                 const bookingData = await bookingService.getBooking(parseInt(id));
                 setBooking(bookingData);
             } catch (err) {
-                setError('Failed to load booking details');
+                const errorMessage = err instanceof Error ? err.message : 'Failed to load booking details';
+                setError(errorMessage);
+                showToast(errorMessage, 'error');
                 console.error('Error fetching booking:', err);
             } finally {
                 setLoading(false);
@@ -29,7 +35,7 @@ const BookingConfirmationPage: React.FC = () => {
         };
 
         fetchBooking();
-    }, [id]);
+    }, [id, showToast]);
 
     const handlePrint = () => {
         window.print();
@@ -41,11 +47,7 @@ const BookingConfirmationPage: React.FC = () => {
     };
 
     if (loading) {
-        return (
-            <div className="text-center py-12">
-                <p className="text-gray-600">Loading booking confirmation...</p>
-            </div>
-        );
+        return <LoadingSpinner text="Loading booking confirmation..." />;
     }
 
     if (error || !booking) {
