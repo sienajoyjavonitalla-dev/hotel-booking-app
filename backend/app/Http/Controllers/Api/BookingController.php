@@ -23,30 +23,39 @@ class BookingController extends Controller
             'total_amount' => 'required|numeric|min:0'
         ]);
 
-        // Check room availability
+        // Calculate total nights (exclude check-out date since guest leaves that day)
+        $checkInDate = \Carbon\Carbon::parse($request->check_in);
+        $checkOutDate = \Carbon\Carbon::parse($request->check_out);
+        // Cast to int to avoid strict-comparison issues
+        $totalDays = (int) $checkInDate->diffInDays($checkOutDate);
+        
+        // Check room availability (exclude check-out date)
+        // Guest needs room on check-in date but not on check-out date (they leave that morning)
         $availabilityCount = RoomAvailability::where('room_id', $request->room_id)
-            ->whereBetween('date', [$request->check_in, $request->check_out])
+            ->where('date', '>=', $request->check_in)
+            ->where('date', '<', $request->check_out) // Exclude check-out date
             ->where('is_available', true)
             ->count();
-            
-        $totalDays = \Carbon\Carbon::parse($request->check_in)
-            ->diffInDays(\Carbon\Carbon::parse($request->check_out));
             
         if ($availabilityCount !== $totalDays) {
             return response()->json(['error' => 'Room not available for selected dates'], 422);
         }
 
-        DB::transaction(function () use ($request) {
+        $booking = DB::transaction(function () use ($request) {
             // Create booking
             $booking = Booking::create($request->all());
             
-            // Mark dates as unavailable
+            // Mark dates as unavailable (exclude check-out date)
             RoomAvailability::where('room_id', $request->room_id)
-                ->whereBetween('date', [$request->check_in, $request->check_out])
+                ->where('date', '>=', $request->check_in)
+                ->where('date', '<', $request->check_out) // Exclude check-out date
                 ->update(['is_available' => false, 'booking_id' => $booking->id]);
+            
+            // Return booking with relationships loaded
+            return $booking->load(['hotel', 'room']);
         });
 
-        return response()->json(['message' => 'Booking created successfully'], 201);
+        return response()->json($booking, 201);
     }
 
     public function show(Booking $booking)

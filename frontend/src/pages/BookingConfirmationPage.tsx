@@ -136,7 +136,7 @@ const BookingConfirmationPage: React.FC = () => {
                             <div>
                                 <p className="text-sm text-gray-600 mb-1">Price per Night</p>
                                 <p className="font-semibold text-gray-900">
-                                    ${booking.room?.price_per_night || 0}
+                                    ${Number(booking.room?.price_per_night || 0).toFixed(2)}
                                 </p>
                             </div>
                         </div>
@@ -193,7 +193,7 @@ const BookingConfirmationPage: React.FC = () => {
                             <div className="flex justify-between items-center mb-2">
                                 <p className="text-gray-600">Room Price</p>
                                 <p className="font-semibold text-gray-900">
-                                    ${booking.room?.price_per_night || 0}/night
+                                    ${Number(booking.room?.price_per_night || 0).toFixed(2)}/night
                                 </p>
                             </div>
                             <div className="flex justify-between items-center mb-2">
@@ -204,7 +204,7 @@ const BookingConfirmationPage: React.FC = () => {
                                 <div className="flex justify-between items-center">
                                     <p className="text-lg font-bold text-gray-900">Total Amount</p>
                                     <p className="text-2xl font-bold text-blue-600">
-                                        ${booking.total_amount.toFixed(2)}
+                                        ${Number(booking.total_amount).toFixed(2)}
                                     </p>
                                 </div>
                             </div>
