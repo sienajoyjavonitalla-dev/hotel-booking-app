@@ -11,12 +11,22 @@ class RoomController extends Controller
     public function checkAvailability(Request $request)
     {
         $request->validate([
-            'room_id' => 'required|exists:rooms,id',
+            'room_id' => 'required|integer',
             'check_in' => 'required|date|after_or_equal:today',
             'check_out' => 'required|date|after:check_in'
         ]);
 
-        $room = Room::findOrFail($request->room_id);
+        $room = Room::find($request->room_id);
+
+        // Room not in DB (e.g. sample data rooms from HotelController fallback) → treat as available
+        if (!$room) {
+            return response()->json([
+                'available' => true,
+                'room_id' => $request->room_id,
+                'check_in' => $request->check_in,
+                'check_out' => $request->check_out,
+            ]);
+        }
 
         // Calculate total nights (exclude check-out date since guest leaves that day)
         $checkInDate = \Carbon\Carbon::parse($request->check_in);
