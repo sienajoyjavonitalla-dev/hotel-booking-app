@@ -17,6 +17,10 @@ Railway is the simplest option - it auto-detects Laravel and handles most setup 
    - Select **"Deploy from GitHub repo"** (or upload code)
    - Choose your `hotel-booking-app` repository
    - Set **Root Directory** to `backend`
+   - **Important:** If you get a "build plan" error, try:
+     - **Settings** → **Build Command:** Leave empty (auto-detect) or set to: `composer install --no-dev --optimize-autoloader`
+     - **Settings** → **Start Command:** `php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT`
+     - Or delete `railway.json` and let Railway auto-detect Laravel
 
 3. **Add MySQL database**
    - In your Railway project, click **"+ New"** → **"Database"** → **"Add MySQL"**
@@ -165,6 +169,26 @@ php artisan db:seed --class=RoomSeeder
 ---
 
 ## Troubleshooting
+
+### Railway Build Plan Error with Nixpacks
+
+If you get "error creating build plan with nixpacks":
+
+**Solution 1: Manual Build Settings**
+1. Go to Railway → Your Service → **Settings**
+2. Set **Build Command:** `composer install --no-dev --optimize-autoloader`
+3. Set **Start Command:** `php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT`
+4. Delete or rename `railway.json` temporarily
+5. Redeploy
+
+**Solution 2: Use Docker**
+1. Railway will detect the `Dockerfile` automatically
+2. Make sure `Dockerfile` exists in `backend/` folder
+3. Redeploy
+
+**Solution 3: Check Root Directory**
+- Ensure **Root Directory** is set to `backend` (not root of repo)
+- Railway needs to see `composer.json` in the root directory
 
 ### CORS errors
 - Ensure `config/cors.php` allows your Vercel domain (already configured for `*.vercel.app`)
