@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import DatePicker from './DatePicker';
 import { differenceInDays } from 'date-fns';
 
@@ -20,8 +20,11 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
     const [checkInHelperText, setCheckInHelperText] = useState('');
     const [checkOutHelperText, setCheckOutHelperText] = useState('');
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
 
     useEffect(() => {
         // Validate check-in date

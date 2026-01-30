@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Room } from '../services/hotelService';
 import { bookingService } from '../services/bookingService';
 import { format } from 'date-fns';
@@ -27,16 +27,7 @@ const RoomSelection: React.FC<RoomSelectionProps> = ({
     const [availability, setAvailability] = useState<{ [key: number]: RoomAvailability }>({});
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        if (checkIn && checkOut) {
-            checkRoomAvailability();
-        } else {
-            // Reset availability when dates are cleared
-            setAvailability({});
-        }
-    }, [checkIn, checkOut, rooms]);
-
-    const checkRoomAvailability = async () => {
+    const checkRoomAvailability = useCallback(async () => {
         if (!checkIn || !checkOut) return;
 
         setLoading(true);
@@ -71,7 +62,16 @@ const RoomSelection: React.FC<RoomSelectionProps> = ({
 
         setAvailability(newAvailability);
         setLoading(false);
-    };
+    }, [checkIn, checkOut, rooms]);
+
+    useEffect(() => {
+        if (checkIn && checkOut) {
+            checkRoomAvailability();
+        } else {
+            // Reset availability when dates are cleared
+            setAvailability({});
+        }
+    }, [checkIn, checkOut, checkRoomAvailability]);
 
     const handleQuantityChange = (roomId: number, quantity: number) => {
         const newSelectedRooms = { ...selectedRooms };
