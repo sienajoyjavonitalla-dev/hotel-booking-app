@@ -35,5 +35,5 @@ RUN chown -R www-data:www-data /var/www \
 ENV PORT=8000
 EXPOSE 8000
 
-# Start server only (run migrations manually or via a separate deploy step)
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
+# Use PHP built-in server (avoids Laravel serve command port type bug with $PORT)
+CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-8000} -t public"]

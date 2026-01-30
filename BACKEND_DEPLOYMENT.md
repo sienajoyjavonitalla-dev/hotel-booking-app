@@ -56,8 +56,9 @@ Railway is the simplest option - it auto-detects Laravel and handles most setup 
 6. **Start command (no migrations)**
    - In Railway → your Laravel service → **Settings** → **Start Command**, set to:
    ```bash
-   php artisan serve --host=0.0.0.0 --port=$PORT
+   php -S 0.0.0.0:$PORT -t public
    ```
+   - This uses PHP's built-in server instead of `php artisan serve` (which can error with "Unsupported operand types: string + int" when `$PORT` is a string). Document root is `public/` so Laravel's `index.php` handles all requests.
    - **Do not** run `php artisan migrate` in the start command. If migrate fails (e.g. "table already exists"), Railway can mark the deploy as crashed. Run migrations once manually (see step 7).
 
 7. **Run migrations once (manual)**
@@ -220,6 +221,14 @@ Railpack only detects PHP/Laravel when **Root Directory** is the folder that con
 - Check logs in your platform's dashboard
 - Ensure `APP_KEY` is set
 - Run `php artisan config:clear` and `php artisan cache:clear`
+
+### "Unsupported operand types: string + int" (ServeCommand.php line 250)
+
+Laravel's `php artisan serve --port=$PORT` can fail on PHP 8+ when `$PORT` is a string (env vars are always strings). **Fix:** Use PHP's built-in server instead. Set **Start Command** to:
+```bash
+php -S 0.0.0.0:$PORT -t public
+```
+The `-t public` sets the document root so Laravel's `public/index.php` handles requests.
 
 ### Migrations fail / "Table already exists" / deploy still crashes
 
