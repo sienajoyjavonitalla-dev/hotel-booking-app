@@ -53,19 +53,27 @@ Railway is the simplest option - it auto-detects Laravel and handles most setup 
    ```
    - Copy the generated key and add it to `APP_KEY` in Variables
 
-6. **Run migrations**
-   - In Railway, go to your service → **Settings** → **Deploy Command** (or use the CLI):
+6. **Start command (no migrations)**
+   - In Railway → your Laravel service → **Settings** → **Start Command**, set to:
    ```bash
-   php artisan migrate --force && php artisan db:seed
+   php artisan serve --host=0.0.0.0 --port=$PORT
    ```
-   - Or add to **Start Command**: `php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT`
+   - **Do not** run `php artisan migrate` in the start command. If migrate fails (e.g. "table already exists"), Railway can mark the deploy as crashed. Run migrations once manually (see step 7).
 
-7. **Get your API URL**
+7. **Run migrations once (manual)**
+   - After the app is running: Railway → your Laravel service → **Settings** → **Shell** or **Run Command**, then run:
+   ```bash
+   php artisan migrate --force
+   php artisan db:seed
+   ```
+   - Or use Railway CLI. Only needed once (or when you add new migrations).
+
+8. **Get your API URL**
    - Railway will give you a URL like `https://your-app.railway.app`
    - Your API base URL is: `https://your-app.railway.app/api`
    - Use this in Vercel's `REACT_APP_API_URL` environment variable
 
-8. **Update CORS** (already done in `config/cors.php` - allows `*.vercel.app`)
+9. **Update CORS** (already done in `config/cors.php` - allows `*.vercel.app`)
 
 ---
 
@@ -213,10 +221,14 @@ Railpack only detects PHP/Laravel when **Root Directory** is the folder that con
 - Ensure `APP_KEY` is set
 - Run `php artisan config:clear` and `php artisan cache:clear`
 
-### Migrations fail / "Table already exists"
+### Migrations fail / "Table already exists" / deploy still crashes
 
-- **"Table 'bookings' already exists"** – Tables were created in a previous deploy but Laravel's `migrations` table is out of sync. The start command now uses `migrate --force || true` so the app still starts; the API will work with existing tables.
-- To sync migration state (optional): in Railway shell or locally with production DB URL, run `php artisan migrate:status` then `php artisan migrate --force` once. If it still fails, you can leave it; the app will start anyway.
+- **"Table 'bookings' already exists"** – Tables exist but Laravel tries to run the migration again (migrations table out of sync). Railway may still mark the deploy as failed even with `|| true`.
+- **Fix:** Remove `migrate` from the **Start Command** entirely. Use only:
+  ```bash
+  php artisan serve --host=0.0.0.0 --port=$PORT
+  ```
+  The app will start; your existing tables are fine. Run new migrations later via Railway Shell when needed.
 - **Other migration errors:** Ensure database exists and credentials are correct. Nuclear option: `php artisan migrate:fresh --seed` (⚠️ deletes all data).
 
 ---
