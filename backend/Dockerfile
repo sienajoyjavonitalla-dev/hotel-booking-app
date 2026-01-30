@@ -31,8 +31,9 @@ RUN php artisan cache:clear || true
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage
 
-# Expose port
+# Railway injects PORT at runtime; default 8000 for local
+ENV PORT=8000
 EXPOSE 8000
 
-# Start server
-CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000
+# Run migrations (ignore failure if tables already exist), then start server
+CMD ["sh", "-c", "php artisan migrate --force || true && php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]

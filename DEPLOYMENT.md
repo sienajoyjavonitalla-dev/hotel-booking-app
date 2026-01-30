@@ -79,13 +79,33 @@ After the backend is deployed:
 
 ---
 
-## 3. "Database in Vercel" and the CORS error
+## 3. CORS error on `/hotels` (request to `hotel-booking-app.vercel.app/api`)
 
-**You cannot set up the database (or Laravel API) in Vercel.** Vercel only hosts your React frontend. It does not run PHP or MySQL.
+**Symptom:** "Access to XMLHttpRequest at 'https://hotel-booking-app.vercel.app/api/hotels' from origin 'https://hotel-booking-app-eight-xi.vercel.app' has been blocked by CORS policy."
 
-If you see a **CORS error** and the request URL points to `https://hotel-booking-app.vercel.app/api/...` or similar, **`REACT_APP_API_URL` is pointing at your Vercel frontend URL.** That is wrong. The frontend on Vercel has no API.
+**Cause:** The frontend is calling your **Vercel URL** (`hotel-booking-app.vercel.app`) instead of your **Laravel backend**. So `REACT_APP_API_URL` is set to a Vercel domain. The Vercel app is just the React SPA; it has no `/api` and no CORS headers for that.
 
-**Fix:** (1) Deploy the Laravel backend (and its database) on a PHP host (Railway, Render, etc.). (2) In Vercel → Settings → Environment Variables, set **`REACT_APP_API_URL`** to your **Laravel backend** base URL (e.g. `https://your-laravel-app.railway.app/api`), **not** your Vercel frontend URL. (3) Redeploy the frontend. The backend CORS already allows `*.vercel.app`.
+**Fix (3 steps):**
+
+1. **Get your backend API URL**  
+   It’s the URL where your Laravel API is running, e.g. from Railway:  
+   `https://your-service-name.up.railway.app`  
+   The API base URL must end with `/api`:  
+   `https://your-service-name.up.railway.app/api`
+
+2. **Set it in Vercel**  
+   - Vercel → your project → **Settings** → **Environment Variables**  
+   - Add or edit **`REACT_APP_API_URL`**  
+   - **Value:** your backend URL including `/api`, e.g. `https://your-service-name.up.railway.app/api`  
+   - **Not** `https://hotel-booking-app.vercel.app` or any `*.vercel.app` URL  
+   - Apply to Production (and Preview if you want).
+
+3. **Redeploy**  
+   **Deployments** → latest deployment → **⋯** → **Redeploy**  
+   (Or push a new commit.)  
+   Env vars are read at **build** time, so a redeploy is required.
+
+After this, the frontend will call your real backend; the backend CORS config already allows `*.vercel.app`.
 
 ---
 

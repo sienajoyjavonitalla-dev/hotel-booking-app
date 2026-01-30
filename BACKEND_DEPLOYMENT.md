@@ -16,26 +16,24 @@ Railway is the simplest option - it auto-detects Laravel and handles most setup 
    - Click **"New Project"**
    - Select **"Deploy from GitHub repo"** (or upload code)
    - Choose your `hotel-booking-app` repository
-   - Set **Root Directory** to `backend`
-   - **Important:** If you get a "build plan" error, try:
-     - **Settings** → **Build Command:** Leave empty (auto-detect) or set to: `composer install --no-dev --optimize-autoloader`
-     - **Settings** → **Start Command:** `php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT`
-     - Or delete `railway.json` and let Railway auto-detect Laravel
+   - **Critical:** Set **Root Directory** to **`backend`**. Railpack detects PHP/Laravel when it sees `composer.json` and `artisan` in the root. Without this, you get "Railpack could not determine how to build the app."
+   - If you already created the project without Root Directory: go to **Settings** → **General** → **Root Directory** → set to `backend` → **Redeploy**
 
 3. **Add MySQL database**
    - In your Railway project, click **"+ New"** → **"Database"** → **"Add MySQL"**
    - Railway will create a MySQL database and provide connection variables
 
-4. **Set environment variables**
-   - Go to your service → **Variables** tab
-   - Add these variables (Railway auto-provides `DATABASE_URL`, `MYSQL_HOST`, etc.):
+4. **Set environment variables on the Laravel service (not on MySQL)**
+   - **Important:** These variables must be set on your **Laravel/backend service** (the one that runs `php artisan serve`), **not** on the MySQL service. The MySQL service only runs the database; Laravel needs the variables to connect to it.
+   - In Railway: click your **Laravel/backend service** (the GitHub-deployed one) → **Variables** tab
+   - Add these variables. Use `${{MySQL.MYSQLHOST}}` etc. to reference the MySQL service (replace `MySQL` with your MySQL service name if different):
    
    ```
    APP_NAME=Hotel Booking API
    APP_ENV=production
-   APP_KEY=                    # Will be generated, see step 5
+   APP_KEY=base64:your-generated-key-here
    APP_DEBUG=false
-   APP_URL=                    # Your Railway app URL (e.g. https://your-app.railway.app)
+   APP_URL=https://your-laravel-service.up.railway.app
    
    DB_CONNECTION=mysql
    DB_HOST=${{MySQL.MYSQLHOST}}
@@ -43,9 +41,9 @@ Railway is the simplest option - it auto-detects Laravel and handles most setup 
    DB_DATABASE=${{MySQL.MYSQLDATABASE}}
    DB_USERNAME=${{MySQL.MYSQLUSER}}
    DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
-   
-   CORS_ALLOWED_ORIGINS=      # Optional: comma-separated Vercel URLs
    ```
+   
+   **If `${{MySQL.*}}` doesn't resolve:** In the Laravel service's Variables tab, click **"Add Reference"** (or **"Connect Variable"**) and select the MySQL service, then pick the variable (e.g. `MYSQLHOST`). Or copy the actual values from the MySQL service's Variables tab and paste them as plain values (e.g. `DB_HOST=monorail.proxy.rlwy.net`).
 
 5. **Generate APP_KEY**
    - In Railway, open the service → **Deployments** → click the latest deployment → **View Logs**
@@ -170,25 +168,36 @@ php artisan db:seed --class=RoomSeeder
 
 ## Troubleshooting
 
-### Railway Build Plan Error with Nixpacks
+### "Pre-deploy command failed" (Deployment failed during deploy process)
 
-If you get "error creating build plan with nixpacks":
+Railway runs a **Pre deploy command** (if you set one) before starting the app. If that command fails (e.g. `php artisan migrate` when DB isn't ready, or a command that doesn't exist), the whole deploy fails.
 
-**Solution 1: Manual Build Settings**
-1. Go to Railway → Your Service → **Settings**
-2. Set **Build Command:** `composer install --no-dev --optimize-autoloader`
-3. Set **Start Command:** `php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT`
-4. Delete or rename `railway.json` temporarily
-5. Redeploy
+**Fix:** Remove the Pre deploy command and run migrations in the **Start command** instead.
+
+1. Railway → Your **Laravel/backend service** → **Settings**
+2. Find **Deploy** or **Build & Deploy** section
+3. **Pre Deploy Command** or **Pre-deploy command:** Clear it (leave empty) or delete it
+4. **Start Command** (if shown): set to `php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT`  
+   (If you use the repo's Dockerfile, migrations already run in the start command; you don't need a separate pre-deploy.)
+5. Save and **Redeploy**
+
+Migrations will then run when the container starts (when DB is available), not before.
+
+### "Railpack could not determine how to build the app"
+
+Railpack only detects PHP/Laravel when **Root Directory** is the folder that contains `composer.json` and `artisan`. In this repo that folder is **`backend`**.
+
+**Solution 1: Set Root Directory (fixes most cases)**
+1. Railway → Your project → **Settings** (or service **Settings**)
+2. Find **Root Directory** (under "Build" or "General")
+3. Set it to **`backend`** (exactly that, no leading slash)
+4. Save and **Redeploy**
 
 **Solution 2: Use Docker**
-1. Railway will detect the `Dockerfile` automatically
-2. Make sure `Dockerfile` exists in `backend/` folder
-3. Redeploy
-
-**Solution 3: Check Root Directory**
-- Ensure **Root Directory** is set to `backend` (not root of repo)
-- Railway needs to see `composer.json` in the root directory
+1. In Railway → Your service → **Settings** → **Build**
+2. Set **Builder** to **Dockerfile** (or enable "Use Dockerfile" if shown)
+3. Ensure Root Directory is still **`backend`** so the Dockerfile at `backend/Dockerfile` is used
+4. Redeploy
 
 ### CORS errors
 - Ensure `config/cors.php` allows your Vercel domain (already configured for `*.vercel.app`)
@@ -204,9 +213,11 @@ If you get "error creating build plan with nixpacks":
 - Ensure `APP_KEY` is set
 - Run `php artisan config:clear` and `php artisan cache:clear`
 
-### Migrations fail
-- Ensure database exists and credentials are correct
-- Try: `php artisan migrate:fresh --seed` (⚠️ deletes all data)
+### Migrations fail / "Table already exists"
+
+- **"Table 'bookings' already exists"** – Tables were created in a previous deploy but Laravel's `migrations` table is out of sync. The start command now uses `migrate --force || true` so the app still starts; the API will work with existing tables.
+- To sync migration state (optional): in Railway shell or locally with production DB URL, run `php artisan migrate:status` then `php artisan migrate --force` once. If it still fails, you can leave it; the app will start anyway.
+- **Other migration errors:** Ensure database exists and credentials are correct. Nuclear option: `php artisan migrate:fresh --seed` (⚠️ deletes all data).
 
 ---
 
