@@ -74,18 +74,28 @@ Vercel does **not** run PHP/Laravel. Deploy the Laravel API to one of these:
 
 After the backend is deployed:
 
-1. Set **CORS** in Laravel so your Vercel domain is allowed (`config/cors.php` → `allowed_origins`).
+1. **CORS** is already set to allow any `*.vercel.app` origin. Optionally set `CORS_ALLOWED_ORIGINS` in the backend `.env` (comma-separated) for extra origins.
 2. Use the backend’s public URL (e.g. `https://api.yourdomain.com`) and set **`REACT_APP_API_URL`** on Vercel to `https://api.yourdomain.com/api` (with `/api` if that’s your Laravel API prefix).
 
 ---
 
-## 3. Quick checklist
+## 3. "Database in Vercel" and the CORS error
+
+**You cannot set up the database (or Laravel API) in Vercel.** Vercel only hosts your React frontend. It does not run PHP or MySQL.
+
+If you see a **CORS error** and the request URL points to `https://hotel-booking-app.vercel.app/api/...` or similar, **`REACT_APP_API_URL` is pointing at your Vercel frontend URL.** That is wrong. The frontend on Vercel has no API.
+
+**Fix:** (1) Deploy the Laravel backend (and its database) on a PHP host (Railway, Render, etc.). (2) In Vercel → Settings → Environment Variables, set **`REACT_APP_API_URL`** to your **Laravel backend** base URL (e.g. `https://your-laravel-app.railway.app/api`), **not** your Vercel frontend URL. (3) Redeploy the frontend. The backend CORS already allows `*.vercel.app`.
+
+---
+
+## 4. Quick checklist
 
 - [ ] Repo pushed to GitHub/GitLab/Bitbucket  
 - [ ] Vercel project created with **Root Directory** = `frontend`  
 - [ ] `REACT_APP_API_URL` set in Vercel to your live API URL (including `/api`)  
 - [ ] Backend deployed on a PHP host  
-- [ ] Laravel CORS allows your Vercel frontend origin  
+- [ ] Laravel CORS allows your Vercel frontend (already allows `*.vercel.app`)  
 - [ ] Database and `.env` configured on the backend server  
 
 Once these are done, the app on Vercel will talk to your Laravel API in production.
