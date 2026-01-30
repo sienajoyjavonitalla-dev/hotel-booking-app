@@ -8,46 +8,60 @@ use Illuminate\Http\JsonResponse;
 
 class HotelController extends Controller
 {
+    /** Use SampleData fallback only when not in local (so local always uses DB). */
+    private function useSampleData(): bool
+    {
+        return !app()->environment('local');
+    }
+
     /**
-     * List all hotels. Returns sample data if database is unavailable or empty.
+     * List all hotels. Returns sample data if database is unavailable or empty (production only).
      */
-    public function index(): JsonResponse|array
+    public function index(): JsonResponse
     {
         try {
             $hotels = Hotel::all();
-            if ($hotels->isEmpty()) {
+            if ($hotels->isEmpty() && $this->useSampleData()) {
                 return response()->json(SampleData::hotels());
             }
-            return $hotels;
+            return response()->json($hotels);
         } catch (\Throwable $e) {
-            return response()->json(SampleData::hotels());
+            if ($this->useSampleData()) {
+                return response()->json(SampleData::hotels());
+            }
+            throw $e;
         }
     }
 
     /**
-     * Show a hotel with rooms. Returns sample data if database is unavailable.
-     * Uses route param name {hotel} but resolved as id (no model binding) so we can fallback when DB fails.
+     * Show a hotel with rooms. Returns sample data if database is unavailable (production only).
      */
-    public function show(int $hotel): JsonResponse|array
+    public function show(int $hotel): JsonResponse
     {
         try {
             $model = Hotel::with('rooms')->findOrFail($hotel);
-            return $model;
+            return response()->json($model);
         } catch (\Throwable $e) {
-            return response()->json(SampleData::hotelWithRooms($hotel));
+            if ($this->useSampleData()) {
+                return response()->json(SampleData::hotelWithRooms($hotel));
+            }
+            throw $e;
         }
     }
 
     /**
-     * Get rooms for a hotel. Returns sample rooms if database is unavailable.
+     * Get rooms for a hotel. Returns sample rooms if database is unavailable (production only).
      */
-    public function getRooms(int $hotel): JsonResponse|array
+    public function getRooms(int $hotel): JsonResponse
     {
         try {
             $model = Hotel::findOrFail($hotel);
-            return $model->rooms;
+            return response()->json($model->rooms);
         } catch (\Throwable $e) {
-            return response()->json(SampleData::rooms($hotel));
+            if ($this->useSampleData()) {
+                return response()->json(SampleData::rooms($hotel));
+            }
+            throw $e;
         }
     }
 }
