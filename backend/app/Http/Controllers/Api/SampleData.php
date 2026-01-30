@@ -44,6 +44,17 @@ class SampleData
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
+            [
+                'id' => 4,
+                'name' => 'Ayah Lodge',
+                'address' => 'Philippines, Baguio City, Ayala Avenue',
+                'description' => 'Cozy mountain lodge with breathtaking views and rustic charm.',
+                'images' => ['hotel5.jpg', 'hotel6.jpg'],
+                'amenities' => ['WiFi', 'Fireplace', 'Hiking Trails', 'Restaurant'],
+                'rating' => 4.3,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
         ];
     }
 

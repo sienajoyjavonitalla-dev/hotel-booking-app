@@ -12,36 +12,44 @@ class RoomController extends Controller
     {
         $request->validate([
             'room_id' => 'required|exists:rooms,id',
-            'check_in' => 'required|date|after:today',
+            'check_in' => 'required|date|after_or_equal:today',
             'check_out' => 'required|date|after:check_in'
         ]);
 
         $room = Room::findOrFail($request->room_id);
-        
+
         // Calculate total nights (exclude check-out date since guest leaves that day)
         $checkInDate = \Carbon\Carbon::parse($request->check_in);
         $checkOutDate = \Carbon\Carbon::parse($request->check_out);
-        // Cast to int to avoid strict-comparison issues like 1 (int) vs 1.0 (float)
         $totalDays = (int) $checkInDate->diffInDays($checkOutDate);
-        
-        // Check if room is available for all nights (from check-in to check-out, excluding check-out date)
-        // Guest needs room on check-in date but not on check-out date (they leave that morning)
+
+        // Count availability records for this range (is_available = true, no booking)
         $availabilityCount = $room->roomAvailability()
             ->where('date', '>=', $request->check_in)
-            ->where('date', '<', $request->check_out) // Exclude check-out date
+            ->where('date', '<', $request->check_out)
             ->where('is_available', true)
             ->count();
-        
+
+        // If no availability rows exist for this range, treat as available (e.g. room_availability not seeded)
+        // Otherwise require a row for every night with is_available = true
+        $hasAnyAvailabilityRows = $room->roomAvailability()
+            ->where('date', '>=', $request->check_in)
+            ->where('date', '<', $request->check_out)
+            ->exists();
+
+        $available = $hasAnyAvailabilityRows
+            ? ($availabilityCount === $totalDays)
+            : true;
+
         $response = [
-            // Strict compare is OK now because both are ints
-            'available' => $availabilityCount === $totalDays,
+            'available' => $available,
             'room_id' => $request->room_id,
             'check_in' => $request->check_in,
             'check_out' => $request->check_out,
             'availability_count' => $availabilityCount,
             'total_days' => $totalDays
         ];
-            
+
         return response()->json($response);
     }
 }
