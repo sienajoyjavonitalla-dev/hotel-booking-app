@@ -16,50 +16,58 @@ class RoomController extends Controller
             'check_out' => 'required|date|after:check_in'
         ]);
 
-        $room = Room::find($request->room_id);
+        try {
+            $room = Room::find($request->room_id);
 
-        // Room not in DB (e.g. sample data rooms from HotelController fallback) → treat as available
-        if (!$room) {
+            // Room not in DB (e.g. sample data rooms from HotelController fallback) → treat as available
+            if (!$room) {
+                return response()->json([
+                    'available' => true,
+                    'room_id' => (int) $request->room_id,
+                    'check_in' => $request->check_in,
+                    'check_out' => $request->check_out,
+                ]);
+            }
+
+            // Calculate total nights (exclude check-out date since guest leaves that day)
+            $checkInDate = \Carbon\Carbon::parse($request->check_in);
+            $checkOutDate = \Carbon\Carbon::parse($request->check_out);
+            $totalDays = (int) $checkInDate->diffInDays($checkOutDate);
+
+            // Count availability records for this range (is_available = true, no booking)
+            $availabilityCount = $room->roomAvailability()
+                ->where('date', '>=', $request->check_in)
+                ->where('date', '<', $request->check_out)
+                ->where('is_available', true)
+                ->count();
+
+            // If no availability rows exist for this range, treat as available (e.g. room_availability not seeded)
+            $hasAnyAvailabilityRows = $room->roomAvailability()
+                ->where('date', '>=', $request->check_in)
+                ->where('date', '<', $request->check_out)
+                ->exists();
+
+            $available = $hasAnyAvailabilityRows
+                ? ($availabilityCount === $totalDays)
+                : true;
+
+            return response()->json([
+                'available' => $available,
+                'room_id' => (int) $request->room_id,
+                'check_in' => $request->check_in,
+                'check_out' => $request->check_out,
+                'availability_count' => $availabilityCount,
+                'total_days' => $totalDays
+            ]);
+        } catch (\Throwable $e) {
+            // Prevent 500 on production (e.g. missing table, timezone, DB issue) → treat as available
+            report($e);
             return response()->json([
                 'available' => true,
-                'room_id' => $request->room_id,
+                'room_id' => (int) $request->room_id,
                 'check_in' => $request->check_in,
                 'check_out' => $request->check_out,
             ]);
         }
-
-        // Calculate total nights (exclude check-out date since guest leaves that day)
-        $checkInDate = \Carbon\Carbon::parse($request->check_in);
-        $checkOutDate = \Carbon\Carbon::parse($request->check_out);
-        $totalDays = (int) $checkInDate->diffInDays($checkOutDate);
-
-        // Count availability records for this range (is_available = true, no booking)
-        $availabilityCount = $room->roomAvailability()
-            ->where('date', '>=', $request->check_in)
-            ->where('date', '<', $request->check_out)
-            ->where('is_available', true)
-            ->count();
-
-        // If no availability rows exist for this range, treat as available (e.g. room_availability not seeded)
-        // Otherwise require a row for every night with is_available = true
-        $hasAnyAvailabilityRows = $room->roomAvailability()
-            ->where('date', '>=', $request->check_in)
-            ->where('date', '<', $request->check_out)
-            ->exists();
-
-        $available = $hasAnyAvailabilityRows
-            ? ($availabilityCount === $totalDays)
-            : true;
-
-        $response = [
-            'available' => $available,
-            'room_id' => $request->room_id,
-            'check_in' => $request->check_in,
-            'check_out' => $request->check_out,
-            'availability_count' => $availabilityCount,
-            'total_days' => $totalDays
-        ];
-
-        return response()->json($response);
     }
 }
