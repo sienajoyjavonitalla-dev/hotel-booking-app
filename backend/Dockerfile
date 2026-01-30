@@ -1,4 +1,4 @@
-FROM php:8.2-fpm
+FROM php:8.2-cli
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -22,6 +22,10 @@ COPY . /var/www
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Clear any cached config that might have been created before dependencies were installed
+RUN php artisan config:clear || true
+RUN php artisan cache:clear || true
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
